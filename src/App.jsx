@@ -152,6 +152,7 @@ export default function RoomPlanner() {
 
   const getOccupants  = (roomId) => (assignments[roomId] || []).map(id => guests.find(g => g.id === id)).filter(Boolean);
   const isAssigned    = (guestId) => Object.values(assignments).some(g => g.includes(guestId));
+  const getRoomFor    = (guestId) => Object.entries(assignments).find(([, gids]) => gids.includes(guestId))?.[0] || null;
   const unassignedG   = guests.filter(g => !isAssigned(g.id));
   const assignedG     = guests.filter(g =>  isAssigned(g.id));
   const totalAssigned = Object.values(assignments).flat().length;
@@ -273,18 +274,24 @@ export default function RoomPlanner() {
             {assignedG.length > 0 && (
                 <div>
                   <div style={{ fontFamily:'DM Sans', fontSize:8, fontWeight:700, letterSpacing:2.5, textTransform:'uppercase', color:'#A09080', marginBottom:7 }}>Placed · {assignedG.length}</div>
-                  {assignedG.map(g=>(
+                  {assignedG.map(g=>{
+                    const room = getRoomFor(g.id);
+                    return (
                       <div key={g.id} style={{ marginBottom:5 }}>
-                        <div className="sidebar-chip" style={{ background:PALETTE[g.colorIdx].bg, color:PALETTE[g.colorIdx].text, borderColor:PALETTE[g.colorIdx].border, opacity:.58, cursor:'default' }}>
+                        <div className="sidebar-chip" draggable
+                             onDragStart={e=>{ setDragging({guestId:g.id,fromRoom:room}); e.dataTransfer.effectAllowed='move'; }}
+                             onDragEnd={()=>{ setDragging(null); setDropTarget(null); }}
+                             style={{ background:PALETTE[g.colorIdx].bg, color:PALETTE[g.colorIdx].text, borderColor:PALETTE[g.colorIdx].border, opacity:.7 }}>
                           <span>✓ {g.name}</span>
-                          <button className="chip-x" onClick={()=>removeGuest(g.id)}>×</button>
+                          <button className="chip-x" onClick={()=>{ if(room) unassign(g.id,room); }} title="Unassign from room">×</button>
                         </div>
                       </div>
-                  ))}
+                    );
+                  })}
                 </div>
             )}
 
-            {dragging?.fromRoom && <div className="unassign-zone">↩ Drop here to unassign</div>}
+            {dragging?.fromRoom && <div className="unassign-zone">↩ Drop here to unassign · or drag to a new room</div>}
             {guests.length===0 && (
                 <div style={{ color:'#BBA898', fontSize:11, fontFamily:'DM Sans', fontStyle:'italic', textAlign:'center', padding:'20px 4px', lineHeight:1.9 }}>
                   Type a name &amp; press Enter<br/>then drag onto a room ✦
